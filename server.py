@@ -74,7 +74,7 @@ def format_question(doc, question_text):
     question = parts[0]
     answers = parts[1:]
 
-    # Thêm câu hỏi
+    # Thêm câu hỏi vào cùng dòng với "Câu {i}:"
     p = doc.add_paragraph()
     p.add_run(question)
     for run in p.runs:
@@ -155,7 +155,8 @@ if st.button("Tạo đề thi"):
             for i, (bai, phan, q_num, q_text) in enumerate(exam_questions_part1, 1):
                 p = doc.add_paragraph()
                 p.add_run(f"Câu {i}: ").bold = True
-                format_question(doc, q_text)
+                p.add_run(q_text.split('\n')[0])  # Thêm câu hỏi vào cùng dòng
+                format_question(doc, '\n'.join(q_text.split('\n')[1:]))  # Chỉ truyền phần đáp án
 
             # Thêm các câu hỏi Phần 2 vào tài liệu
             doc.add_heading(
@@ -164,7 +165,8 @@ if st.button("Tạo đề thi"):
             for i, (bai, phan, q_num, q_text) in enumerate(exam_questions_part2, 1):
                 p = doc.add_paragraph()
                 p.add_run(f"Câu {i}: ").bold = True
-                format_question(doc, q_text)
+                p.add_run(q_text.split('\n')[0])  # Thêm câu hỏi vào cùng dòng
+                format_question(doc, '\n'.join(q_text.split('\n')[1:]))  # Chỉ truyền phần đáp án
 
             # Lưu file Word vào buffer
             docx_buffer = io.BytesIO()
