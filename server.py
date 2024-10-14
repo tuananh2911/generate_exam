@@ -9,6 +9,8 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 import io
 import zipfile
+from docx.shared import Pt, Inches
+from docx.enum.text import WD_TAB_ALIGNMENT, WD_TAB_LEADER
 
 # Add a selection box for choosing the JSON file
 json_option = st.selectbox(
@@ -135,7 +137,12 @@ def format_question(doc, question_text, is_multiple_choice=True):
             p = doc.add_paragraph(answer.strip(), style='Normal')
             p.paragraph_format.space_after = Pt(0)
 
-    # No additional space after the question
+        # Add 10 lines for answers using tab stops
+        for _ in range(10):
+            p = doc.add_paragraph()
+            p.paragraph_format.tab_stops.add_tab_stop(Inches(7.5), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.DOTS)
+            p.add_run('\t')  # Add a tab to create the dotted line
+            p.paragraph_format.space_after = Pt(12)
 
 
 def count_pages(doc):
@@ -179,6 +186,13 @@ def select_questions(data, selections):
     random.shuffle(exam_questions_part2)
     return exam_questions_part1, exam_questions_part2
 
+def create_custom_style(doc, name, font_name, font_size, bold=False):
+    style = doc.styles.add_style(name, 1)
+    font = style.font
+    font.name = font_name
+    font.size = Pt(font_size)
+    font.bold = bold
+    return style
 
 if st.button("Tạo đề thi"):
     # Create a buffer to save the ZIP file
@@ -196,7 +210,7 @@ if st.button("Tạo đề thi"):
             style = doc.styles['Normal']
             style.font.name = 'Times New Roman'
             style.font.size = Pt(12)
-
+            heading_style = create_custom_style(doc, 'CustomHeading', 'Times New Roman', 14, bold=True)
             # Adjust page margins
             section = doc.sections[0]
             section.left_margin = Inches(0.5)
@@ -251,23 +265,26 @@ if st.button("Tạo đề thi"):
             # Add bold horizontal line
             add_horizontal_line(fields)
 
-            doc.add_paragraph()  # Add some space
+            # doc.add_paragraph()  # Add some space
 
             # Add Part 1 questions to the document with custom heading
-            doc.add_heading(selected_headings["part1"], level=1)
+            heading = doc.add_paragraph(selected_headings["part1"], style=heading_style)
+            heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
             for i, (bai, phan, q_num, q_text) in enumerate(exam_questions_part1, 1):
                 p = doc.add_paragraph(style='Normal')
-                p.paragraph_format.space_before = Pt(6)  # Small space before each question
+                p.paragraph_format.space_before = Pt(6)
                 p.paragraph_format.space_after = Pt(0)
                 p.add_run(f"Câu {i}: ").bold = True
                 p.add_run(q_text.split('\n')[0])
                 format_question(doc, '\n'.join(q_text.split('\n')[1:]), is_multiple_choice=True)
 
+            doc.add_paragraph()  # Add some space
             # Add Part 2 questions to the document with custom heading
-            doc.add_heading(selected_headings["part2"], level=1)
+            heading = doc.add_paragraph(selected_headings["part2"], style=heading_style)
+            heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
             for i, (bai, phan, q_num, q_text) in enumerate(exam_questions_part2, 1):
                 p = doc.add_paragraph(style='Normal')
-                p.paragraph_format.space_before = Pt(6)  # Small space before each question
+                p.paragraph_format.space_before = Pt(6)
                 p.paragraph_format.space_after = Pt(0)
                 p.add_run(f"Câu {i}: ").bold = True
                 p.add_run(q_text.split('\n')[0])
