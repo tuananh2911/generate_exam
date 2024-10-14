@@ -102,29 +102,26 @@ def format_question(doc, question_text, is_multiple_choice=True):
     answers = parts[1:]
 
     # Add question
-    p = doc.add_paragraph()
+    p = doc.add_paragraph(style='Normal')
     p.add_run(question)
-    for run in p.runs:
-        run.font.name = 'Times New Roman'
-        run.font.size = Pt(12)
+    p.paragraph_format.space_after = Pt(0)  # Remove space after question
 
     if is_multiple_choice:
         # Create table for multiple choice answers
         if answers:
             table = doc.add_table(rows=len(answers), cols=1)
             table.allow_autofit = False
-            table.width = Inches(6.5)  # Adjust table width
+            table.width = Inches(6.5)
 
             for i, answer in enumerate(answers):
                 cell = table.cell(i, 0)
                 cell.text = answer.strip()
+                cell_para = cell.paragraphs[0]
+                cell_para.paragraph_format.space_after = Pt(0)
+                for run in cell_para.runs:
+                    run.font.name = 'Times New Roman'
+                    run.font.size = Pt(12)
 
-                for paragraph in cell.paragraphs:
-                    for run in paragraph.runs:
-                        run.font.name = 'Times New Roman'
-                        run.font.size = Pt(12)
-
-                # Remove cell border
                 set_cell_border(
                     cell,
                     top={"sz": 0, "val": "none"},
@@ -133,16 +130,12 @@ def format_question(doc, question_text, is_multiple_choice=True):
                     end={"sz": 0, "val": "none"},
                 )
     else:
-        # For essay questions, just add answers as normal paragraphs
+        # For essay questions, add answers as normal paragraphs
         for answer in answers:
-            p = doc.add_paragraph(answer.strip())
-            p.paragraph_format.space_after = Pt(0)  # Reduce space after paragraph
-            for run in p.runs:
-                run.font.name = 'Times New Roman'
-                run.font.size = Pt(12)
+            p = doc.add_paragraph(answer.strip(), style='Normal')
+            p.paragraph_format.space_after = Pt(0)
 
-    # Add a small space after each question
-    doc.add_paragraph().paragraph_format.space_after = Pt(2)
+    # No additional space after the question
 
 
 def count_pages(doc):
@@ -263,17 +256,21 @@ if st.button("Tạo đề thi"):
             # Add Part 1 questions to the document with custom heading
             doc.add_heading(selected_headings["part1"], level=1)
             for i, (bai, phan, q_num, q_text) in enumerate(exam_questions_part1, 1):
-                p = doc.add_paragraph()
+                p = doc.add_paragraph(style='Normal')
+                p.paragraph_format.space_before = Pt(6)  # Small space before each question
+                p.paragraph_format.space_after = Pt(0)
                 p.add_run(f"Câu {i}: ").bold = True
-                p.add_run(q_text.split('\n')[0])  # Add question to the same line
+                p.add_run(q_text.split('\n')[0])
                 format_question(doc, '\n'.join(q_text.split('\n')[1:]), is_multiple_choice=True)
 
             # Add Part 2 questions to the document with custom heading
             doc.add_heading(selected_headings["part2"], level=1)
             for i, (bai, phan, q_num, q_text) in enumerate(exam_questions_part2, 1):
-                p = doc.add_paragraph()
+                p = doc.add_paragraph(style='Normal')
+                p.paragraph_format.space_before = Pt(6)  # Small space before each question
+                p.paragraph_format.space_after = Pt(0)
                 p.add_run(f"Câu {i}: ").bold = True
-                p.add_run(q_text.split('\n')[0])  # Add question to the same line
+                p.add_run(q_text.split('\n')[0])
                 format_question(doc, '\n'.join(q_text.split('\n')[1:]), is_multiple_choice=False)
 
             # Count pages and update the header
