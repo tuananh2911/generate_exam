@@ -21,8 +21,8 @@ json_file_map = {
     "Đề cương lớp 10": {
         "file": "output_2.json",
         "headings": {
-            "part1": "PHẦN I. Trắc nghiệm",
-            "part2": "PHẦN II. Tự luận"
+            "part1": "PHẦN I. TRẮC NGHIỆM ",
+            "part2": "PHẦN II. TỰ LUẬN "
         }
     },
     "Đề cương lớp 11": {
@@ -133,6 +133,9 @@ def format_question(doc, question_text):
     # Add space after each question
     doc.add_paragraph()
 
+def count_pages(doc):
+    return len(doc.sections)
+
 if st.button("Tạo đề thi"):
     # Create a buffer to save the ZIP file
     zip_buffer = io.BytesIO()
@@ -170,7 +173,53 @@ if st.button("Tạo đề thi"):
             section.top_margin = Inches(0.5)
             section.bottom_margin = Inches(0.5)
 
-            doc.add_heading(f'Đề thi - Mã đề {exam_number:03d}', 0)
+            # Add header table
+            header_table = doc.add_table(rows=1, cols=2)
+            header_table.allow_autofit = False
+            header_table.width = Inches(8)  # Adjust as needed
+
+            # Left cell
+            left_cell = header_table.cell(0, 0)
+            left_cell.width = Inches(4)
+            left_para = left_cell.paragraphs[0]
+            left_para.alignment = WD_ALIGN_PARAGRAPH.CENTER  # Center align vertically
+            left_para.add_run("SỞ GD&ĐT HÀ NỘI\n").bold = True
+            left_para.add_run("TRƯỜNG THPT PHÚC LỢI\n").bold = True
+            left_para.add_run("---------------\n")
+
+            # Right cell
+            right_cell = header_table.cell(0, 1)
+            right_cell.width = Inches(4)
+            right_para = right_cell.paragraphs[0]
+            right_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            right_para.add_run(f"KIỂM TRA GIỮA KÌ 1 - KHỐI {10 if '10' in json_option else 11}\n").bold = True
+            right_para.add_run(f"NĂM HỌC 2024 - 2025\n").bold = True
+            right_para.add_run("MÔN: LỊCH SỬ\n").bold = True
+            right_para.add_run("Thời gian làm bài: 45 phút\n")
+            right_para.add_run("(không kể thời gian phát đề)")
+
+            # Remove border from table
+            for row in header_table.rows:
+                for cell in row.cells:
+                    set_cell_border(
+                        cell,
+                        top={"sz": 0, "val": "none"},
+                        bottom={"sz": 0, "val": "none"},
+                        start={"sz": 0, "val": "none"},
+                        end={"sz": 0, "val": "none"},
+                    )
+
+            doc.add_paragraph()  # Add some space
+
+            # Add name and code fields
+            fields = doc.add_paragraph()
+            fields.add_run("Họ và tên: ").bold = True
+            fields.add_run(".................................................................")
+            fields.add_run("     Số báo danh: ").bold = True
+            fields.add_run(".....")
+            fields.add_run(f"     Mã đề {exam_number:03d}").bold = True
+
+            doc.add_paragraph()  # Add some space
 
             # Add Part 1 questions to the document with custom heading
             doc.add_heading(selected_headings["part1"], level=1)
@@ -187,6 +236,10 @@ if st.button("Tạo đề thi"):
                 p.add_run(f"Câu {i}: ").bold = True
                 p.add_run(q_text.split('\n')[0])  # Add question to the same line
                 format_question(doc, '\n'.join(q_text.split('\n')[1:]))  # Only pass answers
+
+            # Count pages and update the header
+            page_count = count_pages(doc)
+            left_para.add_run(f"(Đề thi có {page_count} trang)").italic = True
 
             # Save Word file to buffer
             docx_buffer = io.BytesIO()
