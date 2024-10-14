@@ -95,45 +95,54 @@ def set_cell_border(cell, **kwargs):
                     element.set(qn('w:{}'.format(key)), str(edge_data[key]))
 
 
-def format_question(doc, question_text):
+def format_question(doc, question_text, is_multiple_choice=True):
     # Split question and answers
     parts = question_text.split('\n')
     question = parts[0]
     answers = parts[1:]
 
-    # Add question to the same line as "Câu {i}:"
+    # Add question
     p = doc.add_paragraph()
     p.add_run(question)
     for run in p.runs:
         run.font.name = 'Times New Roman'
         run.font.size = Pt(12)
 
-    # Create table for answers
-    if answers:
-        table = doc.add_table(rows=len(answers), cols=1)
-        table.allow_autofit = False
-        table.width = Inches(6.5)  # Adjust table width
+    if is_multiple_choice:
+        # Create table for multiple choice answers
+        if answers:
+            table = doc.add_table(rows=len(answers), cols=1)
+            table.allow_autofit = False
+            table.width = Inches(6.5)  # Adjust table width
 
-        for i, answer in enumerate(answers):
-            cell = table.cell(i, 0)
-            cell.text = answer.strip()
+            for i, answer in enumerate(answers):
+                cell = table.cell(i, 0)
+                cell.text = answer.strip()
 
-            for paragraph in cell.paragraphs:
-                for run in paragraph.runs:
-                    run.font.name = 'Times New Roman'
-                    run.font.size = Pt(12)
+                for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(12)
 
-            # Remove cell border
-            set_cell_border(
-                cell,
-                top={"sz": 0, "val": "none"},
-                bottom={"sz": 0, "val": "none"},
-                start={"sz": 0, "val": "none"},
-                end={"sz": 0, "val": "none"},
-            )
+                # Remove cell border
+                set_cell_border(
+                    cell,
+                    top={"sz": 0, "val": "none"},
+                    bottom={"sz": 0, "val": "none"},
+                    start={"sz": 0, "val": "none"},
+                    end={"sz": 0, "val": "none"},
+                )
+    else:
+        # For essay questions, just add answers as normal paragraphs
+        for answer in answers:
+            p = doc.add_paragraph(answer.strip())
+            p.paragraph_format.space_after = Pt(0)  # Reduce space after paragraph
+            for run in p.runs:
+                run.font.name = 'Times New Roman'
+                run.font.size = Pt(12)
 
-    # Add space after each question
-    doc.add_paragraph()
+    # Add a small space after each question
+    doc.add_paragraph().paragraph_format.space_after = Pt(2)
 
 
 def count_pages(doc):
@@ -145,20 +154,37 @@ def add_horizontal_line(paragraph):
     pPr = p.get_or_add_pPr()
     pBdr = OxmlElement('w:pBdr')
     pPr.insert_element_before(pBdr,
-        'w:shd', 'w:tabs', 'w:suppressAutoHyphens', 'w:kinsoku', 'w:wordWrap',
-        'w:overflowPunct', 'w:topLinePunct', 'w:autoSpaceDE', 'w:autoSpaceDN',
-        'w:bidi', 'w:adjustRightInd', 'w:snapToGrid', 'w:spacing', 'w:ind',
-        'w:contextualSpacing', 'w:mirrorIndents', 'w:suppressOverlap', 'w:jc',
-        'w:textDirection', 'w:textAlignment', 'w:textboxTightWrap',
-        'w:outlineLvl', 'w:divId', 'w:cnfStyle', 'w:rPr', 'w:sectPr',
-        'w:pPrChange'
-    )
+                              'w:shd', 'w:tabs', 'w:suppressAutoHyphens', 'w:kinsoku', 'w:wordWrap',
+                              'w:overflowPunct', 'w:topLinePunct', 'w:autoSpaceDE', 'w:autoSpaceDN',
+                              'w:bidi', 'w:adjustRightInd', 'w:snapToGrid', 'w:spacing', 'w:ind',
+                              'w:contextualSpacing', 'w:mirrorIndents', 'w:suppressOverlap', 'w:jc',
+                              'w:textDirection', 'w:textAlignment', 'w:textboxTightWrap',
+                              'w:outlineLvl', 'w:divId', 'w:cnfStyle', 'w:rPr', 'w:sectPr',
+                              'w:pPrChange'
+                              )
     bottom = OxmlElement('w:bottom')
-    bottom.set(qn('w:val'), 'thick')  # Changed from 'single' to 'thick'
-    bottom.set(qn('w:sz'), '24')  # Increased from '6' to '24' for a thicker line
+    bottom.set(qn('w:val'), 'thick')
+    bottom.set(qn('w:sz'), '24')
     bottom.set(qn('w:space'), '1')
     bottom.set(qn('w:color'), 'auto')
     pBdr.append(bottom)
+
+
+def select_questions(data, selections):
+    exam_questions_part1 = []
+    exam_questions_part2 = []
+    for key, num_selected in selections.items():
+        bai, phan = key.split('_')
+        questions = data[bai][phan]
+        selected_questions = random.sample(list(questions.items()), num_selected)
+        if phan == "Phần 1":
+            exam_questions_part1.extend([(bai, phan, q_num, q_text) for q_num, q_text in selected_questions])
+        elif phan == "Phần 2":
+            exam_questions_part2.extend([(bai, phan, q_num, q_text) for q_num, q_text in selected_questions])
+
+    random.shuffle(exam_questions_part1)
+    random.shuffle(exam_questions_part2)
+    return exam_questions_part1, exam_questions_part2
 
 
 if st.button("Tạo đề thi"):
@@ -167,21 +193,8 @@ if st.button("Tạo đề thi"):
 
     with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
         for exam_number in range(1, num_exams + 1):
-            # Create exam
-            exam_questions_part1 = []
-            exam_questions_part2 = []
-            for key, num_selected in selections.items():
-                bai, phan = key.split('_')
-                questions = data[bai][phan]
-                selected_questions = random.sample(list(questions.items()), num_selected)
-                if phan == "Phần 1":
-                    exam_questions_part1.extend([(bai, phan, q_num, q_text) for q_num, q_text in selected_questions])
-                elif phan == "Phần 2":
-                    exam_questions_part2.extend([(bai, phan, q_num, q_text) for q_num, q_text in selected_questions])
-
-            # Shuffle questions randomly in each part
-            random.shuffle(exam_questions_part1)
-            random.shuffle(exam_questions_part2)
+            # Select questions for this exam
+            exam_questions_part1, exam_questions_part2 = select_questions(data, selections)
 
             # Create Word file
             doc = Document()
@@ -242,7 +255,7 @@ if st.button("Tạo đề thi"):
             fields.add_run(".....")
             fields.add_run(f"                 Mã đề : {exam_number:03d}").bold = True
 
-            # Add horizontal line
+            # Add bold horizontal line
             add_horizontal_line(fields)
 
             doc.add_paragraph()  # Add some space
@@ -253,7 +266,7 @@ if st.button("Tạo đề thi"):
                 p = doc.add_paragraph()
                 p.add_run(f"Câu {i}: ").bold = True
                 p.add_run(q_text.split('\n')[0])  # Add question to the same line
-                format_question(doc, '\n'.join(q_text.split('\n')[1:]))  # Only pass answers
+                format_question(doc, '\n'.join(q_text.split('\n')[1:]), is_multiple_choice=True)
 
             # Add Part 2 questions to the document with custom heading
             doc.add_heading(selected_headings["part2"], level=1)
@@ -261,7 +274,7 @@ if st.button("Tạo đề thi"):
                 p = doc.add_paragraph()
                 p.add_run(f"Câu {i}: ").bold = True
                 p.add_run(q_text.split('\n')[0])  # Add question to the same line
-                format_question(doc, '\n'.join(q_text.split('\n')[1:]))  # Only pass answers
+                format_question(doc, '\n'.join(q_text.split('\n')[1:]), is_multiple_choice=False)
 
             # Count pages and update the header
             page_count = count_pages(doc)
