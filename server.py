@@ -55,6 +55,7 @@ for bai, content in data.items():
 # Add widget to select the number of exams
 num_exams = st.number_input("Số lượng đề cần tạo", min_value=1, max_value=10, value=1)
 
+
 def set_cell_border(cell, **kwargs):
     """
     Set cell's border
@@ -92,6 +93,7 @@ def set_cell_border(cell, **kwargs):
             for key in ["sz", "val", "color", "space", "shadow"]:
                 if key in edge_data:
                     element.set(qn('w:{}'.format(key)), str(edge_data[key]))
+
 
 def format_question(doc, question_text):
     # Split question and answers
@@ -133,8 +135,31 @@ def format_question(doc, question_text):
     # Add space after each question
     doc.add_paragraph()
 
+
 def count_pages(doc):
     return len(doc.sections)
+
+
+def add_horizontal_line(paragraph):
+    p = paragraph._p  # p is the <w:p> XML element
+    pPr = p.get_or_add_pPr()
+    pBdr = OxmlElement('w:pBdr')
+    pPr.insert_element_before(pBdr,
+        'w:shd', 'w:tabs', 'w:suppressAutoHyphens', 'w:kinsoku', 'w:wordWrap',
+        'w:overflowPunct', 'w:topLinePunct', 'w:autoSpaceDE', 'w:autoSpaceDN',
+        'w:bidi', 'w:adjustRightInd', 'w:snapToGrid', 'w:spacing', 'w:ind',
+        'w:contextualSpacing', 'w:mirrorIndents', 'w:suppressOverlap', 'w:jc',
+        'w:textDirection', 'w:textAlignment', 'w:textboxTightWrap',
+        'w:outlineLvl', 'w:divId', 'w:cnfStyle', 'w:rPr', 'w:sectPr',
+        'w:pPrChange'
+    )
+    bottom = OxmlElement('w:bottom')
+    bottom.set(qn('w:val'), 'thick')  # Changed from 'single' to 'thick'
+    bottom.set(qn('w:sz'), '24')  # Increased from '6' to '24' for a thicker line
+    bottom.set(qn('w:space'), '1')
+    bottom.set(qn('w:color'), 'auto')
+    pBdr.append(bottom)
+
 
 if st.button("Tạo đề thi"):
     # Create a buffer to save the ZIP file
@@ -209,15 +234,16 @@ if st.button("Tạo đề thi"):
                         end={"sz": 0, "val": "none"},
                     )
 
-            doc.add_paragraph()  # Add some space
-
             # Add name and code fields
             fields = doc.add_paragraph()
             fields.add_run("Họ và tên: ").bold = True
             fields.add_run(".................................................................")
             fields.add_run("     Số báo danh: ").bold = True
             fields.add_run(".....")
-            fields.add_run(f"     Mã đề {exam_number:03d}").bold = True
+            fields.add_run(f"                 Mã đề : {exam_number:03d}").bold = True
+
+            # Add horizontal line
+            add_horizontal_line(fields)
 
             doc.add_paragraph()  # Add some space
 
