@@ -10,13 +10,40 @@ from docx.oxml.ns import qn
 import io
 import zipfile
 
-# Đọc dữ liệu JSON
-with open('output.json', 'r', encoding='utf-8') as file:
+# Add a selection box for choosing the JSON file
+json_option = st.selectbox(
+    "Chọn đề cương",
+    ("Đề cương lớp 10", "Đề cương lớp 11")
+)
+
+# Map the selection to the corresponding JSON file and headings
+json_file_map = {
+    "Đề cương lớp 10": {
+        "file": "output_2.json",
+        "headings": {
+            "part1": "PHẦN I. Trắc nghiệm",
+            "part2": "PHẦN II. Tự luận"
+        }
+    },
+    "Đề cương lớp 11": {
+        "file": "output.json",
+        "headings": {
+            "part1": "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn. Thí sinh trả lời câu hỏi từ câu 1 đến câu 24. Mỗi câu hỏi thí sinh chỉ chọn một phương án.",
+            "part2": "PHẦN II. Câu trắc nghiệm đúng, sai: Thí sinh trả lời từ câu 1 đến câu 4, trong mỗi ý a, b, c, d ở mỗi câu thí sinh chọn đúng hoặc sai."
+        }
+    }
+}
+
+selected_json_file = json_file_map[json_option]["file"]
+selected_headings = json_file_map[json_option]["headings"]
+
+# Read the selected JSON file
+with open(selected_json_file, 'r', encoding='utf-8') as file:
     data = json.load(file)
 
 st.title("Tạo đề thi")
 
-# Tạo các widget để chọn số câu hỏi cho mỗi bài và phần
+# Create widgets to select the number of questions for each section
 selections = {}
 for bai, content in data.items():
     st.header(bai)
@@ -25,13 +52,12 @@ for bai, content in data.items():
         num_questions = len(questions)
         selections[key] = st.number_input(f"Số câu hỏi cho {bai} {phan}", min_value=0, max_value=num_questions, value=0)
 
-# Thêm widget để chọn số lượng đề
+# Add widget to select the number of exams
 num_exams = st.number_input("Số lượng đề cần tạo", min_value=1, max_value=10, value=1)
-
 
 def set_cell_border(cell, **kwargs):
     """
-    Set cell`s border
+    Set cell's border
     Usage:
         set_cell_border(
             cell,
@@ -44,7 +70,7 @@ def set_cell_border(cell, **kwargs):
     tc = cell._tc
     tcPr = tc.get_or_add_tcPr()
 
-    # check for tag existnace, if none found, then create one
+    # check for tag existence, if none found, then create one
     tcBorders = tcPr.first_child_found_in("w:tcBorders")
     if tcBorders is None:
         tcBorders = OxmlElement('w:tcBorders')
@@ -56,7 +82,7 @@ def set_cell_border(cell, **kwargs):
         if edge_data:
             tag = 'w:{}'.format(edge)
 
-            # check for tag existnace, if none found, then create one
+            # check for tag existence, if none found, then create one
             element = tcBorders.find(qn(tag))
             if element is None:
                 element = OxmlElement(tag)
@@ -67,25 +93,24 @@ def set_cell_border(cell, **kwargs):
                 if key in edge_data:
                     element.set(qn('w:{}'.format(key)), str(edge_data[key]))
 
-
 def format_question(doc, question_text):
-    # Tách câu hỏi và đáp án
+    # Split question and answers
     parts = question_text.split('\n')
     question = parts[0]
     answers = parts[1:]
 
-    # Thêm câu hỏi vào cùng dòng với "Câu {i}:"
+    # Add question to the same line as "Câu {i}:"
     p = doc.add_paragraph()
     p.add_run(question)
     for run in p.runs:
         run.font.name = 'Times New Roman'
         run.font.size = Pt(12)
 
-    # Tạo bảng cho đáp án
+    # Create table for answers
     if answers:
         table = doc.add_table(rows=len(answers), cols=1)
         table.allow_autofit = False
-        table.width = Inches(6.5)  # Điều chỉnh chiều rộng bảng
+        table.width = Inches(6.5)  # Adjust table width
 
         for i, answer in enumerate(answers):
             cell = table.cell(i, 0)
@@ -96,7 +121,7 @@ def format_question(doc, question_text):
                     run.font.name = 'Times New Roman'
                     run.font.size = Pt(12)
 
-            # Xóa border của cell
+            # Remove cell border
             set_cell_border(
                 cell,
                 top={"sz": 0, "val": "none"},
@@ -105,17 +130,16 @@ def format_question(doc, question_text):
                 end={"sz": 0, "val": "none"},
             )
 
-    # Thêm khoảng trống sau mỗi câu hỏi
+    # Add space after each question
     doc.add_paragraph()
 
-
 if st.button("Tạo đề thi"):
-    # Tạo một buffer để lưu file ZIP
+    # Create a buffer to save the ZIP file
     zip_buffer = io.BytesIO()
 
     with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
         for exam_number in range(1, num_exams + 1):
-            # Tạo đề thi
+            # Create exam
             exam_questions_part1 = []
             exam_questions_part2 = []
             for key, num_selected in selections.items():
@@ -127,19 +151,19 @@ if st.button("Tạo đề thi"):
                 elif phan == "Phần 2":
                     exam_questions_part2.extend([(bai, phan, q_num, q_text) for q_num, q_text in selected_questions])
 
-            # Trộn ngẫu nhiên các câu hỏi trong mỗi phần
+            # Shuffle questions randomly in each part
             random.shuffle(exam_questions_part1)
             random.shuffle(exam_questions_part2)
 
-            # Tạo file Word
+            # Create Word file
             doc = Document()
 
-            # Thiết lập font mặc định
+            # Set default font
             style = doc.styles['Normal']
             style.font.name = 'Times New Roman'
             style.font.size = Pt(12)
 
-            # Điều chỉnh lề trang
+            # Adjust page margins
             section = doc.sections[0]
             section.left_margin = Inches(0.5)
             section.right_margin = Inches(0.5)
@@ -148,38 +172,34 @@ if st.button("Tạo đề thi"):
 
             doc.add_heading(f'Đề thi - Mã đề {exam_number:03d}', 0)
 
-            # Thêm các câu hỏi Phần 1 vào tài liệu
-            doc.add_heading(
-                'PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn. Thí sinh trả lời câu hỏi từ câu 1 đến câu 24. Mỗi câu hỏi thí sinh chỉ chọn một phương án.',
-                level=1)
+            # Add Part 1 questions to the document with custom heading
+            doc.add_heading(selected_headings["part1"], level=1)
             for i, (bai, phan, q_num, q_text) in enumerate(exam_questions_part1, 1):
                 p = doc.add_paragraph()
                 p.add_run(f"Câu {i}: ").bold = True
-                p.add_run(q_text.split('\n')[0])  # Thêm câu hỏi vào cùng dòng
-                format_question(doc, '\n'.join(q_text.split('\n')[1:]))  # Chỉ truyền phần đáp án
+                p.add_run(q_text.split('\n')[0])  # Add question to the same line
+                format_question(doc, '\n'.join(q_text.split('\n')[1:]))  # Only pass answers
 
-            # Thêm các câu hỏi Phần 2 vào tài liệu
-            doc.add_heading(
-                'PHẦN II. Câu trắc nghiệm đúng, sai: Thí sinh trả lời từ câu 1 đến câu 4, trong mỗi ý a, b, c, d ở mỗi câu thí sinh chọn đúng hoặc sai.',
-                level=1)
+            # Add Part 2 questions to the document with custom heading
+            doc.add_heading(selected_headings["part2"], level=1)
             for i, (bai, phan, q_num, q_text) in enumerate(exam_questions_part2, 1):
                 p = doc.add_paragraph()
                 p.add_run(f"Câu {i}: ").bold = True
-                p.add_run(q_text.split('\n')[0])  # Thêm câu hỏi vào cùng dòng
-                format_question(doc, '\n'.join(q_text.split('\n')[1:]))  # Chỉ truyền phần đáp án
+                p.add_run(q_text.split('\n')[0])  # Add question to the same line
+                format_question(doc, '\n'.join(q_text.split('\n')[1:]))  # Only pass answers
 
-            # Lưu file Word vào buffer
+            # Save Word file to buffer
             docx_buffer = io.BytesIO()
             doc.save(docx_buffer)
             docx_buffer.seek(0)
 
-            # Thêm file Word vào ZIP
+            # Add Word file to ZIP
             zip_file.writestr(f'de_thi_{exam_number:03d}.docx', docx_buffer.getvalue())
 
-    # Chuẩn bị buffer ZIP để tải xuống
+    # Prepare ZIP buffer for download
     zip_buffer.seek(0)
 
-    # Tạo link tải xuống cho file ZIP
+    # Create download link for ZIP file
     st.download_button(
         label="Tải xuống tất cả đề thi",
         data=zip_buffer,

@@ -11,7 +11,7 @@ def read_docx(file_path):
     return '\n'.join(full_text)
 
 # Đường dẫn đến file docx
-file_path = 'de_cuong.docx'
+file_path = 'de_cuong_2.docx'
 
 # Đọc nội dung file
 content = read_docx(file_path)
@@ -21,10 +21,9 @@ bai_list = content.split('BÀI ')
 obj = {}
 for bai_index, bai in enumerate(bai_list):  # Bắt đầu từ phần tử thứ 2 và đánh số từ 1
     bai_obj = {}
-    phan_list = bai.split('Phần ')
-    for phan_index, phan in enumerate(phan_list[1:]):  # Bắt đầu từ phần tử thứ 2 và đánh số từ 1
+    phan_list = re.split(r'PHẦN ',bai)
+    for phan_index, phan in enumerate(phan_list[0:]):  # Bắt đầu từ phần tử thứ 2 và đánh số từ 1
         cau_list = re.split(r'Câu \d+.', phan)
-        print(cau_list[0])
         phan_obj = {}
         for cau_index, cau in enumerate(cau_list[1:], 1):  # Bắt đầu từ phần tử thứ 2 và đánh số từ 1
             phan_obj[f'Câu {cau_index}'] = cau.strip()
@@ -36,5 +35,5 @@ json_output = json.dumps(obj, ensure_ascii=False, indent=2)
 
 
 # Lưu JSON vào file
-with open('output.json', 'w', encoding='utf-8') as f:
+with open('output_2.json', 'w', encoding='utf-8') as f:
     json.dump(obj, f, ensure_ascii=False, indent=2)
