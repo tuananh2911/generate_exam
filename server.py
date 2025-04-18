@@ -21,17 +21,17 @@ json_option = st.selectbox(
 # Map the selection to the corresponding JSON file and headings
 json_file_map = {
     "Đề cương lớp 10": {
-        "file": "output_2.json",
+        "file": "output.json",
         "headings": {
             "part1": "PHẦN I. TRẮC NGHIỆM ",
             "part2": "PHẦN II. TỰ LUẬN "
         }
     },
     "Đề cương lớp 11": {
-        "file": "output.json",
+        "file": "output_2.json",
         "headings": {
-            "part1": "PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn. Thí sinh trả lời câu hỏi từ câu 1 đến câu 24. Mỗi câu hỏi thí sinh chỉ chọn một phương án.",
-            "part2": "PHẦN II. Câu trắc nghiệm đúng, sai: Thí sinh trả lời từ câu 1 đến câu 4, trong mỗi ý a, b, c, d ở mỗi câu thí sinh chọn đúng hoặc sai."
+            "part1": "PHẦN I. TRẮC NGHIỆM ",
+            "part2": "PHẦN II. TỰ LUẬN "
         }
     }
 }

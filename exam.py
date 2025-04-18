@@ -1,17 +1,17 @@
 import re
 
-import docx
+from docx import Document
 import json
 
 def read_docx(file_path):
-    doc = docx.Document(file_path)
+    doc = Document(file_path)
     full_text = []
     for para in doc.paragraphs:
         full_text.append(para.text)
     return '\n'.join(full_text)
 
 # Đường dẫn đến file docx
-file_path = 'de_cuong_2.docx'
+file_path = 'decuong11.docx'
 
 # Đọc nội dung file
 content = read_docx(file_path)
@@ -19,16 +19,16 @@ content = read_docx(file_path)
 # Tách nội dung theo "Bài:"
 bai_list = content.split('BÀI ')
 obj = {}
-for bai_index, bai in enumerate(bai_list):  # Bắt đầu từ phần tử thứ 2 và đánh số từ 1
+for bai_index, bai in enumerate(bai_list[1:]):  # Bắt đầu từ phần tử thứ 2 và đánh số từ 1
     bai_obj = {}
-    phan_list = re.split(r'PHẦN ',bai)
-    for phan_index, phan in enumerate(phan_list[0:]):  # Bắt đầu từ phần tử thứ 2 và đánh số từ 1
+    phan_list = re.split(r'Phần ',bai)
+    for phan_index, phan in enumerate(phan_list[1:]):  # Bắt đầu từ phần tử thứ 2 và đánh số từ 1
         cau_list = re.split(r'Câu \d+.', phan)
         phan_obj = {}
         for cau_index, cau in enumerate(cau_list[1:], 1):  # Bắt đầu từ phần tử thứ 2 và đánh số từ 1
             phan_obj[f'Câu {cau_index}'] = cau.strip()
         bai_obj[f'Phần {phan_index+1}'] = phan_obj
-    obj[f'BÀI {bai_index+1}'] = bai_obj
+    obj[f'Bài {bai_index+1}'] = bai_obj
 
 # Chuyển đổi object thành JSON
 json_output = json.dumps(obj, ensure_ascii=False, indent=2)
