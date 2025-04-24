@@ -19,6 +19,7 @@ content = read_docx(file_path)
 # Tách nội dung theo "Bài:"
 bai_list = content.split('BÀI ')
 obj = {}
+id = 8
 for bai_index, bai in enumerate(bai_list[1:]):  # Bắt đầu từ phần tử thứ 2 và đánh số từ 1
     bai_obj = {}
     phan_list = re.split(r'Phần ',bai)
@@ -28,7 +29,8 @@ for bai_index, bai in enumerate(bai_list[1:]):  # Bắt đầu từ phần tử 
         for cau_index, cau in enumerate(cau_list[1:], 1):  # Bắt đầu từ phần tử thứ 2 và đánh số từ 1
             phan_obj[f'Câu {cau_index}'] = cau.strip()
         bai_obj[f'Phần {phan_index+1}'] = phan_obj
-    obj[f'Bài {bai_index+1}'] = bai_obj
+    id +=1    
+    obj[f'Bài {id}'] = bai_obj
 
 # Chuyển đổi object thành JSON
 json_output = json.dumps(obj, ensure_ascii=False, indent=2)
